@@ -1,87 +1,173 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, FlatList, StatusBar } from 'react-native';
-import {LinearGradient} from 'expo-linear-gradient';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, FlatList, StatusBar, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
+const ChatScreen = ({ navigation, route }) => {
+  // Get name and image from route params
+  const { name, image } = route.params;
 
-const messages = [
-  { id: '2', name: 'Jhon Abraham', time: 'Today, 07:30 AM', avatar: require('../assets/call2.png') },
-  { id: '3', name: 'Sabila Sayma', time: 'Yesterday, 07:35 PM', avatar: require('../assets/call3.png') },
-  { id: '4', name: 'Alex Linderson', time: 'Monday, 09:30 AM', avatar: require('../assets/call1.png') },
-  { id: '5', name: 'Jhon Abraham', time: '03/07/22, 07:30 AM', avatar: require('../assets/call2.png') },
-  { id: '6', name: 'John Borino', time: 'Monday, 09:30 AM', avatar: require('../assets/call3.png') },
-  { id: '7', name: 'Sabila Sayma', time: 'Yesterday, 07:35 PM', avatar: require('../assets/call1.png') },
+  // State to manage messages
+  const [messages, setMessages] = useState([
+    { id: '1', message: 'Hey, How are you?', time: 'Today, 07:30 AM', sent: false, selected: false },
+    { id: '2', message: 'I am doing well, thanks!', time: 'Today, 07:35 AM', sent: true, selected: false },
+  ]);
   
-];
+  const [messageInput, setMessageInput] = useState(''); // State for text input
+  const [selectionMode, setSelectionMode] = useState(false); // Whether user is in selection mode
 
-const ChatScreen = ({navigation}) => {
+  // Function to send a text message
+  const sendMessage = () => {
+    if (messageInput.trim()) {
+      const newMessage = {
+        id: Date.now().toString(),
+        message: messageInput,
+        time: new Date().toLocaleTimeString(), // you can adjust format
+        sent: true,
+        selected: false,
+      };
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+      setMessageInput(''); // Clear input field after sending
+    }
+  };
+
+  // Function to simulate sending a voice note
+  const sendVoiceNote = () => {
+    const newMessage = {
+      id: Date.now().toString(),
+      message: '🎤 Voice Note (00:10)', // Placeholder for the audio message
+      time: new Date().toLocaleTimeString(),
+      sent: true,
+      selected: false,
+      audio: true, // Indicate it's an audio message
+    };
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
+  };
+
+  // Function to handle long press and toggle message selection
+  const handleLongPress = (id) => {
+    setSelectionMode(true);
+    setMessages((prevMessages) =>
+      prevMessages.map((message) =>
+        message.id === id ? { ...message, selected: !message.selected } : message
+      )
+    );
+  };
+
+  // Function to delete selected messages
+  const deleteSelectedMessages = () => {
+    Alert.alert(
+      'Delete Messages',
+      'Are you sure you want to delete the selected messages?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: () => {
+            setMessages((prevMessages) => prevMessages.filter((message) => !message.selected));
+            setSelectionMode(false); // Exit selection mode after deletion
+          },
+        },
+      ]
+    );
+  };
+
+  // Function to exit selection mode
+  const clearSelection = () => {
+    setMessages((prevMessages) =>
+      prevMessages.map((message) => ({ ...message, selected: false }))
+    );
+    setSelectionMode(false);
+  };
+
   const renderItem = ({ item }) => (
-    <View style={[styles.messageContainer, item.sent ? styles.sentMessage : styles.receivedMessage]}>
+    <TouchableOpacity
+      onLongPress={() => handleLongPress(item.id)}
+      style={[
+        styles.messageContainer,
+        item.sent ? styles.sentMessage : styles.receivedMessage,
+        item.selected ? styles.selectedMessage : null, // Add selected style
+      ]}
+    >
       {!item.sent && <Image source={require('../assets/recm.png')} style={styles.avatar} />}
       <View style={styles.messageContent}>
         {!item.audio ? (
           <Text style={styles.messageText}>{item.message}</Text>
         ) : (
           <View style={styles.audioMessage}>
-            <Image source={require('../assets/recm.png')} style={styles.audioIcon} />
-            <Text style={styles.audioDuration}>{item.duration}</Text>
+            <MaterialCommunityIcons name="microphone" size={24} color="#fff" />
+            <Text style={styles.audioDuration}>00:10</Text>
           </View>
         )}
         <Text style={styles.messageTime}>{item.time}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-    <StatusBar  barStyle='dark-content'/>
-    <LinearGradient
-    colors={['#97ECFF','#FFFFFF' ]}
-    locations={[0, 0.2]}
-    style={{flex:1}}
-    className=''
-  >
-      <View className=' mt-5 space-x-2' style={styles.header}>
-      <MaterialCommunityIcons name="arrow-left-thin" color='black' size={20}  onPress={() => navigation.navigate('live')}/>
-
-        <View style={styles.headerTitle}>
-          <Image source={require('../assets/recm.png')} style={styles.headerAvatar} />
-          <View>
-            <Text style={styles.headerName}>Jhon Abraham</Text>
-            <Text style={styles.headerStatus}>Active now</Text>
+      <StatusBar barStyle='dark-content' />
+      <LinearGradient colors={['#97ECFF', '#FFFFFF']} locations={[0, 0.2]} style={{ flex: 1 }}>
+        {/* Header */}
+        <View className='mt-5 space-x-2' style={styles.header}>
+          <MaterialCommunityIcons name="arrow-left-thin" color='black' size={20} onPress={() => navigation.goBack()} />
+          <View style={styles.headerTitle}>
+            <Image source={image} style={styles.headerAvatar} />
+            <View>
+              <Text style={styles.headerName}>{name}</Text>
+              <Text style={styles.headerStatus}>Active now</Text>
+            </View>
+          </View>
+          <View className='space-x-2' style={styles.headerIcons}>
+            <MaterialCommunityIcons name="phone-outline" color='black' size={20} />
+            <MaterialCommunityIcons name="video-outline" color='black' size={20} />
+            <MaterialCommunityIcons name="dots-vertical" color='black' size={20} />
           </View>
         </View>
-        <View className=' space-x-2' style={styles.headerIcons}>
-        <MaterialCommunityIcons name="phone-outline" color='black' size={20}  onPress={() => navigation.navigate('videocall1')}/>
 
-        <MaterialCommunityIcons name="video-outline" color='black' size={20}  onPress={() => navigation.navigate('videocall1')}/>
+        {/* Chat messages */}
+        <FlatList
+          data={messages}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.messagesList}
+        />
 
-        <MaterialCommunityIcons name="dots-vertical" color='black' size={20}  onPress={() => navigation.navigate('videocall')}/>
+        {/* Delete button if in selection mode */}
+        {selectionMode && (
+          <View style={styles.selectionToolbar}>
+            <TouchableOpacity onPress={deleteSelectedMessages}>
+              <MaterialCommunityIcons name="delete" color="red" size={28} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={clearSelection}>
+              <Text style={styles.clearSelectionText}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
+        {/* Footer (Text Input and Send Button) */}
+        <View className='space-x-2' style={styles.footer}>
+          <MaterialCommunityIcons name="attachment" color='black' size={20} />
+          <TextInput
+            placeholder="Write your message"
+            style={styles.input}
+            value={messageInput}
+            onChangeText={setMessageInput}
+          />
+          <MaterialCommunityIcons name="gift-outline" color='black' size={20} />
+          <MaterialCommunityIcons name="camera-outline" color='black' size={20} />
+          <TouchableOpacity onPress={sendVoiceNote}>
+            <MaterialCommunityIcons name="microphone" color='black' size={20} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={sendMessage}>
+            <MaterialCommunityIcons name="send" color='black' size={20} />
+          </TouchableOpacity>
         </View>
-      </View>
-
-      <FlatList
-        data={messages}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messagesList}
-      />
-
-      <View className=' space-x-2' style={styles.footer}>
-      <MaterialCommunityIcons name="attachment" color='black' size={20} />
-
-        <TextInput placeholder="Write your message" style={styles.input} />
-        <MaterialCommunityIcons name="gift-outline" color='black' size={20}  />
-
-        <MaterialCommunityIcons name="camera-outline" color='black' size={20}  />
-
-        <MaterialCommunityIcons name="microphone" color='black' size={20} />
-
-      </View>
       </LinearGradient>
     </View>
-    
   );
 };
 
@@ -94,12 +180,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-   
-  },
-  icon: {
-    width: 24,
-    height: 24,
-    marginHorizontal: 8,
   },
   headerTitle: {
     flexDirection: 'row',
@@ -140,6 +220,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignSelf: 'flex-start',
   },
+  selectedMessage: {
+    backgroundColor: '#d1d1d1', // Highlight selected message
+  },
   avatar: {
     width: 40,
     height: 40,
@@ -161,13 +244,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  audioIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 8,
-  },
   audioDuration: {
     fontSize: 16,
+    color: '#fff',
+    marginLeft: 8,
   },
   messageTime: {
     fontSize: 12,
@@ -188,6 +268,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 20,
     marginHorizontal: 8,
+    fontSize: 16,
+  },
+  selectionToolbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 10,
+    backgroundColor: '#fff',
+  },
+  clearSelectionText: {
+    color: 'blue',
     fontSize: 16,
   },
 });
